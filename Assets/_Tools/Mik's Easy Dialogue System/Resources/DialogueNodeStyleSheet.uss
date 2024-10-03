@@ -1,0 +1,27 @@
+/* DIALOGUE NODE */
+.dialogue-node__main-container {
+	background-color: #363848;
+}
+
+.dialogue-node__extension-container {
+	padding: 8px;
+}
+
+.dialogue-node__textfield > .unity-text-field__input {
+	background-color: #2c2a38;
+}
+
+/* START NODE */
+.start-node__main-container {
+	background-color: #523c3f;
+	align-content: center;
+}
+
+.start-node__title-container {
+	background-color: #332222;
+	justify-content: center;
+}
+
+.start-node__textfield > .unity-text-field__input {
+	padding: 4px;
+}

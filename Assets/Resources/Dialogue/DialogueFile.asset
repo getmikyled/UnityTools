@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14df0f38968b3ae4b8563d2a857601a5, type: 3}
+  m_Name: DialogueFile
+  m_EditorClassIdentifier: 
+  startNodes:
+  - GUID: f678bb35-622d-4145-8922-66693b6f74ba
+    position: {x: 257.3333, y: 470.66666}
+    inputPorts: []
+    outputPorts:
+    - portGUID: 29fb6168-653e-49ba-8ff8-3851e354733f
+      nodeGUID: f678bb35-622d-4145-8922-66693b6f74ba
+      connectedNodeGUIDs: []
+    conversationName: Conversation
+    nextNodeGUID: 
+  dialogueNodes:
+  - GUID: 5796ba77-c43b-4a6f-b0b0-cb2345c02a66
+    position: {x: 588.6667, y: 484}
+    inputPorts:
+    - portGUID: 40ce992f-1137-4f02-8315-12b689733d6c
+      nodeGUID: 5796ba77-c43b-4a6f-b0b0-cb2345c02a66
+      connectedNodeGUIDs: []
+    outputPorts: []
+    dialogueName: Dialogue Name
+    dialogueText: dwa
+    choicePorts:
+    - portGUID: f274a9fe-021b-4291-9f7e-4b709686f460
+      nodeGUID: 5796ba77-c43b-4a6f-b0b0-cb2345c02a66
+      connectedNodeGUIDs: []
+      choiceName: wadw
