@@ -37,7 +37,8 @@ namespace Dreamscapes.TileEditor
         public Vector2Int gridSize => _gridSize;
         
         // A child object that contains all the tiles
-        [SerializeField] private Transform tilesContainer;
+        [SerializeField] private Transform _tilesContainer;
+        public Transform tilesContainer => _tilesContainer;
         
 #if UNITY_EDITOR
         
@@ -110,21 +111,21 @@ namespace Dreamscapes.TileEditor
         /// 
         private void ClearTiles()
         {
-            if (tilesContainer == null)
+            if (_tilesContainer == null)
             {
                 // Cache TilesContainer if null
                 DTETilesContainer container = transform.GetComponentInChildren<DTETilesContainer>();
                 if (container == null)
                 {
                     // Create new TilesContainer object if null
-                    tilesContainer = new GameObject("TilesContainer").transform;
-                    tilesContainer.gameObject.AddComponent<DTETilesContainer>();
-                    tilesContainer.parent = transform;
-                    tilesContainer.localPosition = Vector3.zero;
+                    _tilesContainer = new GameObject("TilesContainer").transform;
+                    _tilesContainer.gameObject.AddComponent<DTETilesContainer>();
+                    _tilesContainer.parent = transform;
+                    _tilesContainer.localPosition = Vector3.zero;
                 }
                 else
                 {
-                    tilesContainer = container.transform;
+                    _tilesContainer = container.transform;
                 }
             }
 
