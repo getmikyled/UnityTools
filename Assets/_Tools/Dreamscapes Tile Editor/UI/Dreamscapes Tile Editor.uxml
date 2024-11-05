@@ -1,5 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/_Tools/Dreamscapes%20Tile%20Editor/UI/DTEStyles.uss?fileID=7433441132597879392&amp;guid=97eff7ecbcf3b3e458c9289135523967&amp;type=3#DTEStyles" />
+    <Style src="project://database/Assets/Tools/Dreamscapes%20Tile%20Editor/UI/DTEStyles.uss?fileID=7433441132597879392&amp;guid=97eff7ecbcf3b3e458c9289135523967&amp;type=3#DTEStyles" />
     <ui:VisualElement name="DreamscapesTileEditor" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: column;">
         <ui:VisualElement name="Space" class="space" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);" />
         <ui:Label tabindex="-1" text="Tilemap Properties" display-tooltip-when-elided="true" name="TileMapPropertiesLabel" class="header" />
@@ -20,7 +20,7 @@
             <ui:Button text="Biome Assets" display-tooltip-when-elided="true" name="BiomeAssetsTab" class="tabButton" style="margin-left: 1px; margin-right: 1px; margin-top: 0; margin-bottom: 0;" />
         </ui:VisualElement>
         <ui:ScrollView name="ScrollView" mode="Horizontal" focusable="true" class="scrollView" style="height: 300px; background-color: rgba(0, 0, 0, 0); flex-direction: row; flex-wrap: wrap;">
-            <ui:VisualElement name="TileBrushContainer" style="flex-grow: 1; background-color: rgba(84, 84, 84, 0); flex-direction: row; flex-wrap: wrap; background-image: url(&apos;project://database/Assets/_Tools/Dreamscapes%20Tile%20Editor/Assets/T_Background.png?fileID=2800000&amp;guid=616ca93e37ffd3746b767fda0c613088&amp;type=3#T_Background&apos;); -unity-background-image-tint-color: rgb(41, 41, 41); display: none; -unity-background-scale-mode: scale-and-crop;" />
+            <ui:VisualElement name="TileBrushContainer" style="flex-grow: 1; background-color: rgba(84, 84, 84, 0); flex-direction: row; flex-wrap: wrap; background-image: none; -unity-background-image-tint-color: rgb(41, 41, 41); display: none; -unity-background-scale-mode: scale-and-crop;" />
             <ui:VisualElement name="BiomeAssetsContainer" style="flex-grow: 1; background-color: rgba(46, 46, 46, 0); flex-direction: row; flex-wrap: wrap; background-image: none; -unity-background-image-tint-color: rgb(41, 41, 41); display: flex; -unity-background-scale-mode: scale-and-crop; border-left-color: rgba(0, 0, 0, 0); border-right-color: rgba(0, 0, 0, 0); border-top-color: rgba(0, 0, 0, 0); border-bottom-color: rgba(0, 0, 0, 0);" />
         </ui:ScrollView>
     </ui:VisualElement>

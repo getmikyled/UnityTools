@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,9 +13,8 @@ namespace Dreamscapes.TileEditor
     /// 
     public enum BiomeType
     {
-        DreamForest = 0,
-        FireLand = 1,
-        FoodLand = 2,
+        Dreamscape = 0,
+        Lava = 1,
     }
     
     ///-/////////////////////////////////////////////////////////////////////////
@@ -25,7 +26,7 @@ namespace Dreamscapes.TileEditor
         public SODTEBiomeManager biomeManager => _biomeManager;
         
         // Stores the TileMap's BiomeType
-        [SerializeField] private BiomeType _biomeType = BiomeType.DreamForest;
+        [SerializeField] private BiomeType _biomeType = BiomeType.Dreamscape;
         public BiomeType biomeType => _biomeType;
         
         // Stores the TileMap's Biome Seed
@@ -85,6 +86,8 @@ namespace Dreamscapes.TileEditor
             SODTEBiome biome = biomeManager.biomes[(int)_biomeType];
             Random.InitState(_biomeSeed);
 
+            GameObject[] tiles = biome.GetTileVariations();
+            
             Vector2 tileSize = biomeManager.tileSize;
             Vector2 tilePosition = tileSize / 2;
             Vector2 tileSpawnOrigin = new Vector2(-(tilePosition.x * (_gridSize.x - 1)), -(tilePosition.y * (_gridSize.y - 1)));
@@ -94,7 +97,7 @@ namespace Dreamscapes.TileEditor
                 for (int y = 0; y < _gridSize.y; y++)
                 {
                     // Get random tile prefab
-                    GameObject randomTilePrefab = biome.tiles[Random.Range(0, biome.tiles.Length)];
+                    GameObject randomTilePrefab = tiles[Random.Range(0, tiles.Length)];
                     GameObject newTile = (GameObject)PrefabUtility.InstantiatePrefab(randomTilePrefab, tilesContainer.transform);
 
                     // Set the tile's position
@@ -140,7 +143,7 @@ namespace Dreamscapes.TileEditor
                 DestroyImmediate(tile.gameObject);
             }
         }
-        
+
 #endif // UNITY_EDITOR
         
     }

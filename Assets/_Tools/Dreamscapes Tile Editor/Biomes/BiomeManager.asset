@@ -12,8 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af700dc373d29a74b9df44ca32ab5d07, type: 3}
   m_Name: BiomeManager
   m_EditorClassIdentifier: 
-  tileSize: {x: 1, y: 1, z: 1}
+  tileSize: {x: 3, y: 3}
   biomes:
-  - {fileID: 11400000, guid: 9a736e63893eb524f9386e1c25a8b738, type: 2}
-  - {fileID: 11400000, guid: 24b431da7a3b9864f913c8ead11f83d3, type: 2}
-  - {fileID: 11400000, guid: 6dbaad57a5c8afb4b8948bfdc759c7e7, type: 2}
+  - {fileID: 11400000, guid: 0c28b541cf8f12d41ac0c84810345a0d, type: 2}
+  - {fileID: 11400000, guid: 62b7de6347a769948972bf9c7ed0dc23, type: 2}

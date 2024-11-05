@@ -1,7 +1,10 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Unity.EditorCoroutines.Editor;
 
 namespace Dreamscapes.TileEditor
 {
@@ -24,10 +27,10 @@ namespace Dreamscapes.TileEditor
 		TileBrush = 1,
 		BiomeAssets = 2,
 	}
-	
+
 	///-/////////////////////////////////////////////////////////////////////////
 	///
-	
+
 	///-/////////////////////////////////////////////////////////////////////////
 	///
 	///	The editor script for the DTileMap class
@@ -39,54 +42,55 @@ namespace Dreamscapes.TileEditor
 
 		private DTETileMap tileMap = null;
 		private Transform assetsContainer;
-		
+
 		private ToolMode toolMode = ToolMode.Default;
 		private Tab tab = Tab.None;
-		
+
 		// Cached Visual Elements
 		private VisualElement tileBrushContainer;
 		private VisualElement biomeAssetsContainer;
-		
+
 		// Tool Settings
-		private bool gridSnapToggled = false;
 		private float gridSnapSize = 1;
-		
+
 		// Tile Brush Tool Mode
 		private GameObject selectedTileBrush;
 		private GameObject selectedTileBrushPreview;
 		private GameObject hiddenTile;
-		
+
 		// Place Asset ToolMode
 		private GameObject selectedAsset;
 		private GameObject selectedAssetPreview;
+		private bool leftMouseDown = false;
+		private double leftMouseHoldDuration = 0f;
+		private double leftMouseHoldStartTime = 0f;
 
 		///-////////////////////////////////////////////////
 		///
 		private void OnEnable()
 		{
-			SceneView.duringSceneGui += OnSceneTileBrush;
-			SceneView.duringSceneGui += OnSceneBiomeAsset;
+			tileMap = target as DTETileMap;
+			if (tileMap == null)
+			{
+				return;
+			}
 		}
 		
 		///-////////////////////////////////////////////////
 		///
 		private void OnDisable()
 		{
-			SceneView.duringSceneGui -= OnSceneTileBrush;
-			SceneView.duringSceneGui -= OnSceneBiomeAsset;
-			
 			SetToolMode(ToolMode.Default);
 		}
-		
-#region CreateUI
-		
+
+		#region CreateUI
+
 		///-/////////////////////////////////////////////////////////////////////////
 		/// 
 		public override VisualElement CreateInspectorGUI()
 		{
 			VisualElement root = new VisualElement();
 			
-			tileMap = target as DTETileMap;
 			if (tileMap != null)
 			{
 				// Get Asset Container
@@ -97,7 +101,7 @@ namespace Dreamscapes.TileEditor
 					assetsContainer.parent = tileMap.transform;
 				}
 			}
-			
+
 			toolMode = ToolMode.Default;
 
 			// Error check, make sure that the tile map exists
@@ -113,9 +117,9 @@ namespace Dreamscapes.TileEditor
 			tree.CloneTree(root);
 
 			//---- TILEMAP PROPERTIES ----//
-			
+
 			// Initialize the Biome Type Field
-			EnumField biomeTypeField = root.Q<EnumField>(name="BiomeTypeField");
+			EnumField biomeTypeField = root.Q<EnumField>(name = "BiomeTypeField");
 			biomeTypeField.RegisterValueChangedCallback(OnBiomeTypeChanged);
 			biomeTypeField.value = tileMap.biomeType;
 
@@ -123,33 +127,33 @@ namespace Dreamscapes.TileEditor
 			SliderInt biomeSeedSlider = root.Q<SliderInt>(name = "BiomeSeedSlider");
 			biomeSeedSlider.RegisterValueChangedCallback(OnBiomeSeedChanged);
 			biomeSeedSlider.value = tileMap.biomeSeed;
-			
+
 			// Initialize the Grid Size Field
-			Vector2IntField gridSizeField = root.Q<Vector2IntField>(name="GridSizeField");
+			Vector2IntField gridSizeField = root.Q<Vector2IntField>(name = "GridSizeField");
 			gridSizeField.RegisterValueChangedCallback(OnGridSizeChanged);
 			gridSizeField.value = tileMap.gridSize;
-			
+
 			//---- TOOL SETTINGS ----//
-			
+
 			// Initialize Grid Snap Size Field
 			Slider gridSnapSizeSlider = root.Q<Slider>(name = "GridSnapSlider");
 			gridSnapSizeSlider.RegisterValueChangedCallback(OnGridSnapSizeChanged);
 			gridSnapSize = gridSnapSizeSlider.value;
-			
+
 			//---- TAB BUTTONS ----//
 			Button tileBrushTabButton = root.Q<Button>(name = "TileBrushTab");
 			tileBrushTabButton.clicked += () => { SetTab(Tab.TileBrush); };
 			Button biomeAssetsTabButton = root.Q<Button>(name = "BiomeAssetsTab");
 			biomeAssetsTabButton.clicked += () => { SetTab(Tab.BiomeAssets); };
-			
+
 			//---- TILE BRUSH ----//
 			tileBrushContainer = root.Q<VisualElement>(name = "BiomeAssetsContainer");
-			
+
 			//---- BIOME ASSETS ----//
 			biomeAssetsContainer = root.Q<VisualElement>(name = "BiomeAssetsContainer");
-			
+
 			SetTab(Tab.TileBrush);
-				
+
 			return root;
 		}
 
@@ -159,33 +163,33 @@ namespace Dreamscapes.TileEditor
 		{
 			return false;
 		}
-		
-#endregion //CreateUI
 
-#region Registered Callback Methods
+		#endregion //CreateUI
+
+		#region Registered Callback Methods
 
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnBiomeTypeChanged(ChangeEvent<Enum> newBiomeType)
 		{
-			tileMap.SetBiomeType((BiomeType) newBiomeType.newValue);
-			RefreshOtherUI();
+			tileMap.SetBiomeType((BiomeType)newBiomeType.newValue);
+			
+			RefreshBiomeAssetsContainer();
+			RefreshTileBrushContainer();
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnBiomeSeedChanged(ChangeEvent<int> newBiomeSeed)
 		{
 			tileMap.SetBiomeSeed(newBiomeSeed.newValue);
-			RefreshOtherUI();
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnGridSizeChanged(ChangeEvent<Vector2Int> newGridSize)
 		{
 			tileMap.SetGridSize(newGridSize.newValue);
-			RefreshOtherUI();
 		}
 
 		///-//////////////////////////////////////////////////////////////////
@@ -194,100 +198,48 @@ namespace Dreamscapes.TileEditor
 		{
 			gridSnapSize = newGridSnapSize.newValue;
 		}
-		
-		///-//////////////////////////////////////////////////////////////////
-		///
-		private void RefreshOtherUI()
-		{
-			RefreshBiomeAssetsContainer();
-		}
 
 		private void RefreshTileBrushContainer()
 		{
 			tileBrushContainer.Clear();
-            			
-            SODTEBiome biome = tileMap.GetBiome();
-            
-            Vector2 buttonSize = new Vector2(100, 100);
 
-            foreach (GameObject prefab in biome.tiles)
-            {
-	            // Get the prefab's texture
-	            Texture2D prefabTexture = AssetPreview.GetAssetPreview(prefab);
-	            Image prefabImage = new Image();
-				
-	            // Check if asset preview is still loading
-	            if (AssetPreview.IsLoadingAssetPreview(prefab.GetInstanceID()))
-	            {
-		            prefabImage.image = Resources.Load<Texture>("LoadingIcon");
-		            Repaint();
-	            }
-	            else
-	            {
-		            prefabImage.image = prefabTexture;
-	            }
-				
-	            // Create the button used for selecting the prefab
-	            Button newPrefabButton = new Button();
-	            newPrefabButton.style.width = buttonSize.x;
-	            newPrefabButton.style.height = buttonSize.y;
-	            newPrefabButton.Add(prefabImage);
-                        
-	            tileBrushContainer.Add(newPrefabButton);
-	            newPrefabButton.clickable.clicked += () => { OnSelectTileBrush(prefab); };
-            }
+			SODTEBiome biome = tileMap.GetBiome();
+
+			foreach (GameObject prefab in biome.GetOverrideTiles())
+			{
+				// Create prefab button
+				Button prefabButton = CreatePrefabButton(prefab);
+				tileBrushContainer.Add(prefabButton);
+				prefabButton.clickable.clicked += () => { OnSelectTileBrush(prefab); };
+			}
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnSelectTileBrush(GameObject tileBrush)
 		{
-			SetToolMode(ToolMode.Default);	// Exit and then reenter just in case there is an already existing preview
-			
+			SetToolMode(ToolMode.Default); // Exit and then reenter just in case there is an already existing preview
+
 			selectedTileBrush = tileBrush;
 			SetToolMode(ToolMode.TileBrush);
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void RefreshBiomeAssetsContainer()
 		{
 			biomeAssetsContainer.Clear();
-			
+
 			SODTEBiome biome = tileMap.GetBiome();
 
-			string folderPath = biome.prefabsFolderPath;
-			string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[]{ folderPath });
+			GameObject[] biomeAssets = biome.GetBiomeAssets();
 
-			Vector2 buttonSize = new Vector2(100, 100);
-			
-			foreach (string prefabGuid in prefabGuids)
+			foreach (GameObject biomeAsset in biomeAssets)
 			{
-				// Get the prefab and get images for ui button
-				string prefabPath = AssetDatabase.GUIDToAssetPath(prefabGuid);
-				GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-				Texture2D prefabTexture = AssetPreview.GetAssetPreview(prefab);
-				Image prefabImage = new Image();
-				
-				// Check if asset preview is still loading
-				if (AssetPreview.IsLoadingAssetPreview(prefab.GetInstanceID()))
-				{
-					prefabImage.image = Resources.Load<Texture>("LoadingIcon");
-					Repaint();
-				}
-				else
-				{
-					prefabImage.image = prefabTexture;
-				}
-				
-				// Create the button used for selecting the prefab
-				Button newPrefabButton = new Button();
-				newPrefabButton.style.width = buttonSize.x;
-				newPrefabButton.style.height = buttonSize.y;
-				newPrefabButton.Add(prefabImage);
-                        
-				biomeAssetsContainer.Add(newPrefabButton);
-				newPrefabButton.clickable.clicked += () => { OnSelectBiomeAsset(prefab); };
+				// Create prefab button
+				Button prefabButton = CreatePrefabButton(biomeAsset);
+				biomeAssetsContainer.Add(prefabButton);
+				prefabButton.clicked += () => { OnSelectBiomeAsset(biomeAsset); };
 			}
 		}
 
@@ -295,15 +247,15 @@ namespace Dreamscapes.TileEditor
 		///
 		private void OnSelectBiomeAsset(GameObject biomeAsset)
 		{
-			SetToolMode(ToolMode.Default);	// Exit and then reenter just in case there is an already existing preview
-			
+			SetToolMode(ToolMode.Default); // Exit and then reenter just in case there is an already existing preview
+
 			selectedAsset = biomeAsset;
 			SetToolMode(ToolMode.BiomeAsset);
 		}
-		
-#endregion // #region Registered Callback Methods
 
-#region Tool Mode State Machine
+		#endregion // #region Registered Callback Methods
+
+		#region Tool Mode State Machine
 
 		///-//////////////////////////////////////////////////////////////////
 		///
@@ -316,7 +268,7 @@ namespace Dreamscapes.TileEditor
 
 			ToolMode prevToolMode = toolMode;
 			toolMode = newToolMode;
-			
+
 			// Call Exit Methods
 			switch (prevToolMode)
 			{
@@ -330,7 +282,7 @@ namespace Dreamscapes.TileEditor
 				default:
 					break;
 			}
-			
+
 			// Call Enter Methods
 			switch (toolMode)
 			{
@@ -352,7 +304,7 @@ namespace Dreamscapes.TileEditor
 		{
 			CreateTileBrushPreview();
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnExitTileBrushMode()
@@ -374,12 +326,15 @@ namespace Dreamscapes.TileEditor
 		{
 			DestroyBiomeAssetPreview();
 			
+			// Ensure that object rotation is off
+			leftMouseDown = false;
+
 			selectedAsset = null;
 		}
 
-#endregion // Tool Mode State Machine
+		#endregion // Tool Mode State Machine
 
-#region Tab State Machine
+		#region Tab State Machine
 
 		///-//////////////////////////////////////////////////////////////////
 		///
@@ -392,7 +347,7 @@ namespace Dreamscapes.TileEditor
 
 			Tab prevTab = newTab;
 			tab = newTab;
-					
+
 			// Call Exit Methods
 			switch (prevTab)
 			{
@@ -405,7 +360,7 @@ namespace Dreamscapes.TileEditor
 				default:
 					break;
 			}
-					
+
 			// Call Enter Methods
 			switch (tab)
 			{
@@ -434,7 +389,7 @@ namespace Dreamscapes.TileEditor
 		{
 			tileBrushContainer.style.display = DisplayStyle.None;
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void OnEnterBiomeAssetsTab()
@@ -452,20 +407,32 @@ namespace Dreamscapes.TileEditor
 
 #endregion // Tab State Machine
 
+		///-//////////////////////////////////////////////////////////////////
+		///
+		public void OnSceneGUI()
+		{
+			Event evt = Event.current;
+			
+			// Ensure that no tools are selectable
+			Tools.current = Tool.None;
+
+			OnSceneTileBrush(evt);
+			OnSceneBiomeAsset(evt);
+		}
+
 #region OnSceneTileBrush
 
 		///-//////////////////////////////////////////////////////////////////
 		///
-		private void OnSceneTileBrush(SceneView sceneView)
+		private void OnSceneTileBrush(Event evt)
 		{
 			if (toolMode != ToolMode.TileBrush)
 			{
 				return;
 			}
 			
-			Event evt = Event.current;
 			int id = GUIUtility.GetControlID(FocusType.Passive);
-                
+
 			switch (evt.type)
 			{
 				case EventType.Layout:
@@ -487,11 +454,11 @@ namespace Dreamscapes.TileEditor
 						// Raycast from mouse to world
 						Ray ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
 						bool hit = Physics.Raycast(ray, out RaycastHit hitInfo);
-						
+
 						// Check if hit, if so -> Place Asset
 						if (hit)
 						{
-							ReplaceTile(evt, hitInfo.transform.gameObject);
+							ReplaceTile(evt);
 						}
 						else
 						{
@@ -501,6 +468,7 @@ namespace Dreamscapes.TileEditor
 
 						evt.Use();
 					}
+
 					break;
 				case EventType.MouseUp:
 					if (evt.button == 0 && GUIUtility.hotControl == id)
@@ -509,10 +477,11 @@ namespace Dreamscapes.TileEditor
 
 						evt.Use();
 					}
+
 					break;
 			}
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void CreateTileBrushPreview()
@@ -535,15 +504,16 @@ namespace Dreamscapes.TileEditor
 
 		///-//////////////////////////////////////////////////////////////////
 		///
-		private void ReplaceTile(Event evt, GameObject tileHit)
+		private void ReplaceTile(Event evt)
 		{
 			// Instantiate tile
 			Transform tile = ((GameObject)PrefabUtility.InstantiatePrefab(selectedTileBrush)).transform;
 			tile.parent = tileMap.tilesContainer;
 			tile.position = selectedTileBrushPreview.transform.position;
-			
+
 			// Destroy tile hit
-			DestroyImmediate(tileHit);
+			DestroyImmediate(hiddenTile);
+			hiddenTile = null;
 
 			//records the object so that it can be undone and sets it as dirty (so that unity saves it)
 			Undo.RegisterCreatedObjectUndo(tile.gameObject, "DTE: Replaced tile");
@@ -551,7 +521,7 @@ namespace Dreamscapes.TileEditor
 
 			evt.Use();
 		}
-		
+
 		///-//////////////////////////////////////////////////////////////////
 		///
 		private void UpdateTileBrushPreviewPosition(Event evt)
@@ -560,16 +530,16 @@ namespace Dreamscapes.TileEditor
 			{
 				return;
 			}
-			
+
 			// Raycast from mouse to world
 			Ray ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
 			bool hit = Physics.Raycast(ray, out RaycastHit hitInfo);
-				
+
 			if (hit) // if the prefab was placed on another GameObject
 			{
 				selectedTileBrushPreview.SetActive(true);
 				SetHiddenTile(hitInfo.transform.gameObject);
-				
+
 				selectedTileBrushPreview.transform.position = hitInfo.transform.position;
 			}
 			else
@@ -590,7 +560,7 @@ namespace Dreamscapes.TileEditor
 
 			GameObject prevTile = hiddenTile;
 			hiddenTile = tile;
-			
+
 			// Reactivate hidden tile
 			if (prevTile != null)
 			{
@@ -601,7 +571,7 @@ namespace Dreamscapes.TileEditor
 			if (hiddenTile != null)
 			{
 				hiddenTile.SetActive(false);
-				
+
 				// Set preview layer to default
 				selectedTileBrushPreview.SetLayerInAllChildren(0);
 			}
@@ -611,23 +581,23 @@ namespace Dreamscapes.TileEditor
 				selectedTileBrushPreview.SetLayerInAllChildren(2);
 			}
 		}
-		
+
+
 #endregion // OnSceneTileBrush
 
 #region OnSceneBiomeAsset
 
 		///-//////////////////////////////////////////////////////////////////
 		///
-		private void OnSceneBiomeAsset(SceneView sceneView)
+		private void OnSceneBiomeAsset(Event evt)
 		{
 			if (toolMode != ToolMode.BiomeAsset)
 			{
 				return;
 			}
 			
-			Event evt = Event.current;
 			int id = GUIUtility.GetControlID(FocusType.Passive);
-                
+			// Handle any mouse input
 			switch (evt.type)
 			{
 				case EventType.Layout:
@@ -636,8 +606,9 @@ namespace Dreamscapes.TileEditor
 					// AddDefaultControl means that if no other control is selected, this will be chosen as the fallback.
 					// This allows things like the translate handle and buttons to function.
 					HandleUtility.AddDefaultControl(id);
-
+					
 					UpdateBiomeAssetPreviewPosition(evt);
+					
 					break;
 				}
 				case EventType.MouseDown:
@@ -645,15 +616,19 @@ namespace Dreamscapes.TileEditor
 					{
 						// Tells the scene view that the placing prefab event is taking place and to ignore other related events 
 						GUIUtility.hotControl = id;
+						
+						// Reset leftMouseHoldDuration
+						leftMouseHoldStartTime = EditorApplication.timeSinceStartup;
+						leftMouseHoldDuration = 0f;
 
 						// Raycast from mouse to world
 						Ray ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
-						bool hit = Physics.Raycast(ray, out RaycastHit hitInfo);
+						bool hit = Physics.Raycast(ray);
 						
-						// Check if hit, if so -> Place Asset
+						// Check if hit, if so -> Try Place Asset
 						if (hit)
 						{
-							PlaceBiomeAsset(evt);
+							leftMouseDown = true;
 						}
 						else
 						{
@@ -665,13 +640,78 @@ namespace Dreamscapes.TileEditor
 					}
 					break;
 				case EventType.MouseUp:
-					if (evt.button == 0 && GUIUtility.hotControl == id)
+					if (evt.button == 0 && GUIUtility.hotControl == id && leftMouseDown)
 					{
 						GUIUtility.hotControl = 0; // resets hot control
+						
+						PlaceBiomeAsset(evt);
 
+						// Object rotation is no longer on
+						leftMouseDown = false;
+						
 						evt.Use();
 					}
 					break;
+				case EventType.MouseDrag:
+					if (leftMouseDown && GUIUtility.hotControl == id)
+					{
+						leftMouseHoldDuration = EditorApplication.timeSinceStartup - leftMouseHoldStartTime;
+					}
+					
+					break;
+				case EventType.MouseLeaveWindow:
+					leftMouseDown = false;
+					break;
+			}
+			
+			// If the user is trying to place an asset
+			if (leftMouseDown && leftMouseHoldDuration > 0.5f)
+			{
+				// Handle GUI rotation
+				float radius = 0.5f;
+				Vector3 objectPosition = selectedAssetPreview.transform.position;
+				
+				Handles.DrawWireDisc(objectPosition, Vector3.up, radius, 0.2f);
+
+				float angleIncrement = 15f;
+				float numIncrements = 360 / angleIncrement;
+
+				for (int i = 0; i < numIncrements; i++)
+				{
+					Vector3 handleDirection = new Vector3(Mathf.Cos(angleIncrement * i), 0, Mathf.Sin(angleIncrement * i)).normalized;
+					Handles.DrawLine(objectPosition + (handleDirection * (0.25f * radius)), objectPosition + (handleDirection * (0.75f * radius)), 0.1f);
+				}
+				
+				// Update Object Rotation
+				// Raycast from mouse to world
+				Ray ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
+				bool hit = Physics.Raycast(ray, out RaycastHit hitInfo);
+				Vector3 point;
+						
+				// Check if hit, if so -> Try Place Asset
+				if (hit)
+				{
+					leftMouseDown = true;
+					point = hitInfo.point;
+				}
+				else
+				{
+					float t = -ray.origin.y / ray.direction.y; // to calculate the distance along the ray where it intersects the 0 plane
+					point = ray.origin + t * ray.direction; // this represents the intersection point of the ray and the y plane
+				}
+
+				Vector3 direction = Vector3.ProjectOnPlane(point - selectedAssetPreview.transform.position, Vector3.up);
+				if (direction != Vector3.zero)
+				{
+					// Snap direction to the angle
+					float angle = Mathf.Atan2(direction.z, direction.x) * Mathf.Rad2Deg;
+					float snappedAngle = angle.Round(15f);
+					
+					// Convert snapped angle back to a direction vector
+					Vector3 snappedDirection = new Vector3(Mathf.Cos(snappedAngle * Mathf.Deg2Rad), 0, Mathf.Sin(snappedAngle * Mathf.Deg2Rad));
+					
+					selectedAssetPreview.transform.forward = snappedDirection;
+				}
 			}
 		}
 		
@@ -689,7 +729,13 @@ namespace Dreamscapes.TileEditor
 			
 			foreach (MeshRenderer renderer in renderers)
 			{
-				renderer.sharedMaterial = previewHighlightShader;
+				List<Material> newSharedMaterials = new List<Material>();
+				for (int i = 0; i < renderer.sharedMaterials.Length; i++)
+				{
+					newSharedMaterials.Add(previewHighlightShader);
+				}
+				
+				renderer.SetSharedMaterials(newSharedMaterials);
 			}
 		}
 
@@ -710,7 +756,8 @@ namespace Dreamscapes.TileEditor
 		{
 			Transform placedAsset = ((GameObject)PrefabUtility.InstantiatePrefab(selectedAsset)).transform;
 			placedAsset.parent = assetsContainer;
-			placedAsset.position = selectedAssetPreview.transform.position;  
+			placedAsset.position = selectedAssetPreview.transform.position;
+			placedAsset.rotation = selectedAssetPreview.transform.rotation;
 
 			//records the object so that it can be undone and sets it as dirty (so that unity saves it)
 			Undo.RegisterCreatedObjectUndo(placedAsset.gameObject, "DTE: Placed Biome Asset");
@@ -723,10 +770,12 @@ namespace Dreamscapes.TileEditor
 		///
 		private void UpdateBiomeAssetPreviewPosition(Event evt)
 		{
-			if (selectedAssetPreview == null)
+			if (selectedAssetPreview == null || leftMouseDown)
 			{
 				return;
 			}
+
+			bool gridSnapToggled = evt.control;
 			
 			// Raycast from mouse to world
 			Ray ray = HandleUtility.GUIPointToWorldRay(evt.mousePosition);
@@ -740,11 +789,11 @@ namespace Dreamscapes.TileEditor
 					// Offset snap depending on grid size
 					float xPos, zPos;
 					xPos = (tileMap.gridSize.x % 2 == 1) 
-						? hitInfo.point.x.Round(gridSnapSize) 
-						: hitInfo.point.x.Round(gridSnapSize, tileMap.biomeManager.tileSize.x / 2); 
+						? hitInfo.point.x.Round(CalculateGridSnapSize(gridSnapSize))
+						: hitInfo.point.x.Round(CalculateGridSnapSize(gridSnapSize), tileMap.biomeManager.tileSize.x / 2); 
 					zPos = (tileMap.gridSize.y % 2 == 1) 
-						? hitInfo.point.z.Round(gridSnapSize)
-						: hitInfo.point.z.Round(gridSnapSize, tileMap.biomeManager.tileSize.y / 2);
+						? hitInfo.point.z.Round(CalculateGridSnapSize(gridSnapSize))
+						: hitInfo.point.z.Round(CalculateGridSnapSize(gridSnapSize), tileMap.biomeManager.tileSize.y / 2);
 					selectedAssetPreview.transform.position = new Vector3(xPos, hitInfo.point.y, zPos);
 				}
 				else
@@ -756,7 +805,50 @@ namespace Dreamscapes.TileEditor
 		}
 		
 #endregion // OnSceneBiomeAsset
-		
-	}
 
+		///-//////////////////////////////////////////////////////////////////
+		///
+		private Button CreatePrefabButton(GameObject prefab)
+		{
+			Vector2 buttonSize = new Vector2(100, 100);
+			
+			// Create the button used for selecting the prefab
+			Button newPrefabButton = new Button();
+			newPrefabButton.style.width = buttonSize.x;
+			newPrefabButton.style.height = buttonSize.y;
+			
+			// Add Button to UI and Subscribe Click Method
+			tileBrushContainer.Add(newPrefabButton);
+			
+			// Start coroutine for adding asset preview
+			EditorCoroutineUtility.StartCoroutine(CoLoadAssetPreview(prefab, newPrefabButton), this);
+			
+			return newPrefabButton;
+		}
+
+		///-////////////////////////////////////////////////
+		///
+		private IEnumerator CoLoadAssetPreview(UnityEngine.Object asset, Button button)
+		{
+			// Try to continuously get preview texture
+			Texture2D previewTexture = AssetPreview.GetAssetPreview(asset);
+			while (previewTexture == null)
+			{
+				yield return null; // Wait for the next frame
+				previewTexture = AssetPreview.GetAssetPreview(asset); // Try again
+			}
+
+			// Add preview image to the button
+			Image previewImage = new Image();
+			previewImage.image = previewTexture;
+			button.Add(previewImage);
+		}
+
+		///-//////////////////////////////////////////////////////////////////
+		///
+		private float CalculateGridSnapSize(float gridSnap)
+		{
+			return gridSnap * tileMap.biomeManager.tileSize.x;
+		}
+	}
 }
