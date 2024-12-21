@@ -6,9 +6,9 @@ namespace Dreamscape.TileEditor
 {
 	///-/////////////////////////////////////////////////////////////////////////
 	///
-	public class DTETilesContainer : MonoBehaviour
+	public class DTETileBrushPreview : MonoBehaviour
 	{
-		
+		// No code needed. Simply used to differnetiate between preview and normal tiles.
 	}
 
 }
