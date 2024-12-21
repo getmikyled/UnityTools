@@ -6,6 +6,8 @@ Dreamscape is a 3D roguelite that has a map generation system that builds out by
 ## Solution
 In order to automate some of the processes, I created the **Dreamscape Level Editor Tool** (DTE)
 
+https://github.com/user-attachments/assets/2435d387-2d26-49ef-a8df-7af42e26538a
+
 ## Documentation
 
 ### What features does the tool provide?
